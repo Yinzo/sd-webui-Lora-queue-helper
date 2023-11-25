@@ -10,3 +10,7 @@ Helpful for compare Lora, Or just switching Lora easily without switch tab.
 
 ## Install
 To install from webui, go to Extensions -> Install from URL, paste https://github.com/Yinzo/sd-webui-Lora-queue-helper into URL field, and press Install.
+
+## Tips
++ Place your lora into **sub folders** by class.
++ Use build-in Lora configuration to store **Activation Text & Preferred Weight**, which will be automatically used in this script. Otherwise it will only apply the Lora with default 1 weight.
