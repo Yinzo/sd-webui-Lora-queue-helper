@@ -2,7 +2,7 @@
 
 A Script that help you generate a batch of Lora, using same prompt & settings.
 
-Helpful for compare Lora, Or just switching Lora easily without switch tab.
+Helpful for compare Lora for same character with identical prompt & settings / Generate different characters from the same source (like the sample picture) / Or just switching and picking Lora easily without changing tab.
 
 
 ![](https://raw.githubusercontent.com/Yinzo/sd-webui-Lora-queue-helper/main/docs/ui.png)
