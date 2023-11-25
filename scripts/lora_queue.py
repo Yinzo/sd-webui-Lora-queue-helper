@@ -37,11 +37,10 @@ def process_json(file_path):
         # Format the output string
         output = f"<lora:{filename}:{preferred_weight}>, {activation_text},"
 
-        # Print the output
         return output
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"An error occurred in Lora queue helper: {e}")
 
 
 class Script(scripts.Script):
@@ -93,7 +92,7 @@ class Script(scripts.Script):
                 deselect_all_dirs_button = gr.Button("Clear", size="sm")
 
         startup_loras = get_lora(base_dir_textbox.value, directory_checkboxes.value)
-        print(f"start up lora: {startup_loras}")
+        
         with gr.Group():
             tags_checkboxes = gr.CheckboxGroup(label="Lora", choices=startup_loras, value=startup_loras, visible=len(startup_loras)>0, elem_id=self.elem_id("tags_checkboxes"))
             with gr.Row():
@@ -141,7 +140,6 @@ class Script(scripts.Script):
 
                 jobs.append(args)
 
-        print(f"Will process {len(safetensor_files)} lora in {job_count} jobs.")
         if (checkbox_iterate or checkbox_iterate_batch) and p.seed == -1:
             p.seed = int(random.randrange(4294967294))
 
