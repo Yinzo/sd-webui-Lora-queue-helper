@@ -202,7 +202,7 @@ class Script(scripts.Script):
             all_prompts += proc.all_prompts
             infotexts += proc.infotexts
 
-        if is_save_grid:
+        if is_save_grid and len(result_images) > 1:
             grid_image = images.image_grid(result_images, rows=1)
             result_images.insert(0, grid_image)
             all_prompts.insert(0, "")
