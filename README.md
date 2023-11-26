@@ -1,4 +1,4 @@
-# Lora Queue Helper for SD WebUI A111
+# Lora Queue Helper for SD WebUI A1111
 
 A Script that help you generate a batch of Lora, using same prompt & settings.
 
