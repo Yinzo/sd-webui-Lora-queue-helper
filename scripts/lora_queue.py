@@ -184,6 +184,8 @@ class Script(scripts.Script):
         if is_save_grid:
             grid_image = images.image_grid(result_images, rows=1)
             result_images.insert(0, grid_image)
+            all_prompts.insert(0, "")
+            infotexts.insert(0, "")
 
 
         return Processed(p, result_images, p.seed, "", all_prompts=all_prompts, infotexts=infotexts)
