@@ -49,7 +49,7 @@ def get_lora_prompt(lora_path, json_path):
         if opts.lora_preferred_name == "Filename":
             lora_name = lora_path.stem
         else:
-            metadata = sd_models.read_metadata_from_safetensors(lora_path.stem)
+            metadata = sd_models.read_metadata_from_safetensors(lora_path)
             lora_name = metadata.get('ss_output_name', lora_path.stem)
 
         # Format the prompt string
@@ -113,7 +113,7 @@ class Script(scripts.Script):
 
         base_dir_checkbox = gr.Checkbox(label="Use Custom Lora path", value=False,
                                         elem_id=self.elem_id("base_dir_checkbox"))
-        base_dir_textbox = gr.Textbox(label="Lora directory", visible=False, elem_id=self.elem_id("base_dir_textbox"))
+        base_dir_textbox = gr.Textbox(label="Lora directory", placeholder="Relative path under Lora directory. Use --lora-dir to set Lora directory at WebUI startup.", visible=False, elem_id=self.elem_id("base_dir_textbox"))
         base_dir = base_dir_textbox.value if base_dir_checkbox.value else lora_dir
         all_dirs = get_directories(base_dir)
 
