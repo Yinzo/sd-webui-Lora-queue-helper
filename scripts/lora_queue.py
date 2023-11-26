@@ -5,9 +5,9 @@ import random
 
 import gradio as gr
 
-from modules import sd_samplers, errors, scripts, images
+from modules import sd_samplers, errors, scripts, images, sd_models
 from modules.processing import Processed, process_images
-from modules.shared import state, cmd_opts
+from modules.shared import state, cmd_opts, opts
 
 
 def get_directories(base_path):
@@ -25,21 +25,28 @@ def read_json_file(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
-def process_json(file_path):
+def get_lora_prompt(lora_path, json_path):
     try:
         # Open and read the JSON file
-        with open(file_path, 'r', encoding='utf-8') as file:
+        with open(json_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
 
         # Extract the filename without the extension
-        filename = file_path.rsplit('/', 1)[-1].split('.')[0]
+        filename = lora_path.rsplit('/', 1)[-1].split('.')[0]
 
         # Extract the required fields from the JSON data
         preferred_weight = data.get("preferred weight", "1")
         activation_text = data.get("activation text", "")
+        metadata = sd_models.read_metadata_from_safetensors(lora_path)
+        alias = metadata.get('ss_output_name', filename)
+         
+        if opts.lora_preferred_name == "Filename":
+            lora_name = filename
+        else:
+            lora_name = alias
 
-        # Format the output string
-        output = f"<lora:{filename}:{preferred_weight}>, {activation_text},"
+        # Format the prompt string
+        output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
 
         return output
 
@@ -143,11 +150,12 @@ class Script(scripts.Script):
                 lora_filename = os.path.splitext(safetensor_file)[0]
                 if lora_filename not in selected_loras:
                     continue
+                lora_file_path = os.path.join(base_path, directory, safetensor_file)
                 json_file = lora_filename + '.json'
                 json_file_path = os.path.join(base_path, directory, json_file)
                 
                 if os.path.exists(json_file_path):
-                    additional_prompt = process_json(json_file_path)
+                    additional_prompt = get_lora_prompt(lora_file_path, json_file_path)
                 else:
                     additional_prompt = f"<lora:{lora_filename}:1>,"
 
