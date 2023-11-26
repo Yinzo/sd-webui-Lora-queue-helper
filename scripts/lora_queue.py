@@ -7,12 +7,13 @@ import gradio as gr
 
 from modules import sd_samplers, errors, scripts, images
 from modules.processing import Processed, process_images
-from modules.shared import state
+from modules.shared import state, cmd_opts
 
 
 def get_directories(base_path):
+    lora_base_path = os.path.join(cmd_opts.lora_dir, base_path)
     try:
-        directories = [d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))]
+        directories = [d for d in os.listdir(lora_base_path) if os.path.isdir(os.path.join(lora_base_path, d))]
     except:
         directories = []
     return directories
@@ -64,7 +65,7 @@ class Script(scripts.Script):
             return all_loras
 
         def update_loras(base_path, directories):
-            all_loras = get_lora(base_path, directories)
+            all_loras = get_lora(os.path.join(cmd_opts.lora_dir, base_path), directories)
             visible = len(all_loras) > 0
             return gr.CheckboxGroup.update(choices=all_loras, value=all_loras, visible=visible), gr.Button.update(visible=visible), gr.Button.update(visible=visible)
 
@@ -81,7 +82,7 @@ class Script(scripts.Script):
         def deselect_all_lora():
             return gr.CheckboxGroup.update(value=[])
 
-        base_dir_textbox = gr.Textbox(label="Base directory", value="models/Lora", elem_id=self.elem_id("base_dir_textbox"))
+        base_dir_textbox = gr.Textbox(label="Base directory", elem_id=self.elem_id("base_dir_textbox"))
         all_dirs = get_directories(base_dir_textbox.value)
         all_dirs.insert(0, "/")
 
@@ -119,7 +120,7 @@ class Script(scripts.Script):
         jobs = []
 
         for directory in directories:
-            safetensor_files = [f for f in os.listdir(os.path.join(base_path, directory)) if f.endswith('.safetensors')]
+            safetensor_files = [f for f in os.listdir(os.path.join(cmd_opts.lora_dir, base_path, directory)) if f.endswith('.safetensors')]
             
             for safetensor_file in safetensor_files:
                 lora_filename = os.path.splitext(safetensor_file)[0]
