@@ -127,7 +127,7 @@ class Script(scripts.Script):
         select_all_dirs_button.click(fn=select_all_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=directory_checkboxes)
         deselect_all_dirs_button.click(fn=deselect_all_dirs, inputs=None, outputs=directory_checkboxes)
 
-        return [base_dir_checkbox, base_dir_textbox, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid]
+        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid]
 
     def run(self, p, is_use_custom_path, custom_path , directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid):
         p.do_not_save_grid = not is_save_grid
