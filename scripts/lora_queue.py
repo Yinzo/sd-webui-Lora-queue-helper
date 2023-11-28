@@ -37,29 +37,30 @@ def read_json_file(file_path):
         return json.load(file)
 
 def get_lora_prompt(lora_path, json_path):
+    # Open and read the JSON file
+    with open(json_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # Extract the required fields from the JSON data
+    preferred_weight = data.get("preferred weight", 1)
+    activation_text = data.get("activation text", "")
+
     try:
-        # Open and read the JSON file
-        with open(json_path, 'r', encoding='utf-8') as file:
-            data = json.load(file)
+        if int(preferred_weight) == 0:
+            preferred_weight = 1
+    except:
+        preferred_weight = 1
 
-        # Extract the required fields from the JSON data
-        preferred_weight = data.get("preferred weight", "1")
-        activation_text = data.get("activation text", "")
+    if opts.lora_preferred_name == "Filename":
+        lora_name = lora_path.stem
+    else:
+        metadata = sd_models.read_metadata_from_safetensors(lora_path)
+        lora_name = metadata.get('ss_output_name', lora_path.stem)
 
-        if opts.lora_preferred_name == "Filename":
-            lora_name = lora_path.stem
-        else:
-            metadata = sd_models.read_metadata_from_safetensors(lora_path)
-            lora_name = metadata.get('ss_output_name', lora_path.stem)
+    # Format the prompt string
+    output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
 
-        # Format the prompt string
-        output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
-
-        return output
-
-    except Exception as e:
-        print(f"An error occurred in Lora queue helper: {e}")
-
+    return output
 
 class Script(scripts.Script):
     def title(self):
@@ -167,9 +168,14 @@ class Script(scripts.Script):
                 json_file = lora_filename + '.json'
                 json_file_path = directory.joinpath(json_file)
 
+                additional_prompt = None
                 if os.path.exists(json_file_path):
-                    additional_prompt = get_lora_prompt(lora_file_path, json_file_path)
-                else:
+                    try:
+                        additional_prompt = get_lora_prompt(lora_file_path, json_file_path)
+                    except Exception as e:
+                        print(f"Lora Queue Helper got error when loading lora info, error: {e}")
+                
+                if additional_prompt == None or not isinstance(additional_prompt, str):
                     additional_prompt = f"<lora:{lora_filename}:1>,"
 
                 args = {}
