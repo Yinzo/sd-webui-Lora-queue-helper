@@ -46,7 +46,7 @@ def get_lora_prompt(lora_path, json_path):
     activation_text = data.get("activation text", "")
 
     try:
-        if int(preferred_weight) == 0:
+        if float(preferred_weight) == 0:
             preferred_weight = 1
     except:
         preferred_weight = 1
