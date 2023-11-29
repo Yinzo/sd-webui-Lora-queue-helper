@@ -112,41 +112,50 @@ class Script(scripts.Script):
         def deselect_all_lora():
             return gr.CheckboxGroup.update(value=[])
 
-        base_dir_checkbox = gr.Checkbox(label="Use Custom Lora path", value=False,
-                                        elem_id=self.elem_id("base_dir_checkbox"))
-        base_dir_textbox = gr.Textbox(label="Lora directory", placeholder="Relative path under Lora directory. Use --lora-dir to set Lora directory at WebUI startup.", visible=False, elem_id=self.elem_id("base_dir_textbox"))
-        base_dir = base_dir_textbox.value if base_dir_checkbox.value else lora_dir
-        all_dirs = get_directories(base_dir)
+        def toggle_row_number(checked):
+            return gr.Number.update(visible=checked)
 
-        with gr.Group():
+        with gr.Column():
+            base_dir_checkbox = gr.Checkbox(label="Use Custom Lora path", value=False,
+                                            elem_id=self.elem_id("base_dir_checkbox"))
+            base_dir_textbox = gr.Textbox(label="Lora directory", placeholder="Relative path under Lora directory. Use --lora-dir to set Lora directory at WebUI startup.", visible=False, elem_id=self.elem_id("base_dir_textbox"))
+            base_dir = base_dir_textbox.value if base_dir_checkbox.value else lora_dir
+            all_dirs = get_directories(base_dir)
+
             directory_checkboxes = gr.CheckboxGroup(label="Select Directory", choices=all_dirs, value=["/"], elem_id=self.elem_id("directory_checkboxes"))
-            with gr.Row():
-                select_all_dirs_button = gr.Button("All", size="sm")
-                deselect_all_dirs_button = gr.Button("Clear", size="sm")
 
-        startup_loras = get_lora(base_dir, directory_checkboxes.value)
-        
-        with gr.Group():
+            with gr.Row():
+                select_all_dirs_button = gr.Button("All")
+                deselect_all_dirs_button = gr.Button("Clear")
+
+            startup_loras = get_lora(base_dir, directory_checkboxes.value)
+            
             lora_checkboxes = gr.CheckboxGroup(label="Lora", choices=startup_loras, value=startup_loras, visible=len(startup_loras)>0, elem_id=self.elem_id("lora_checkboxes"))
+
             with gr.Row():
-                select_all_lora_button = gr.Button("All", size="sm", visible=len(startup_loras)>0)
-                deselect_all_lora_button = gr.Button("Clear", size="sm", visible=len(startup_loras)>0)
+                select_all_lora_button = gr.Button("All", visible=len(startup_loras)>0)
+                deselect_all_lora_button = gr.Button("Clear", visible=len(startup_loras)>0)
 
-        checkbox_iterate = gr.Checkbox(label="Use consecutive seed", value=False, elem_id=self.elem_id("checkbox_iterate"))
-        checkbox_iterate_batch = gr.Checkbox(label="Use same random seed", value=False, elem_id=self.elem_id("checkbox_iterate_batch"))
-        checkbox_save_grid = gr.Checkbox(label="Save grid image", value=True, elem_id=self.elem_id("checkbox_save_grid"))
+            with gr.Row():
+                checkbox_iterate = gr.Checkbox(label="Use consecutive seed", value=False, elem_id=self.elem_id("checkbox_iterate"))
+                checkbox_iterate_batch = gr.Checkbox(label="Use same random seed", value=False, elem_id=self.elem_id("checkbox_iterate_batch"))
+            
+            with gr.Row(equal_height=True):
+                checkbox_save_grid = gr.Checkbox(label="Save grid image", value=True, elem_id=self.elem_id("checkbox_save_grid"))
+                grid_row_number = gr.Number(label="Grid row number", value=1, visible=True, elem_id=self.elem_id("grid_row_number"))
 
-        base_dir_checkbox.change(fn=show_dir_textbox, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[base_dir_textbox, directory_checkboxes])
-        base_dir_textbox.change(fn=update_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[directory_checkboxes])
-        directory_checkboxes.change(fn=update_loras, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=[lora_checkboxes, select_all_lora_button, deselect_all_lora_button])
-        select_all_lora_button.click(fn=select_all_lora, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=lora_checkboxes)
-        deselect_all_lora_button.click(fn=deselect_all_lora, inputs=None, outputs=lora_checkboxes)
-        select_all_dirs_button.click(fn=select_all_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=directory_checkboxes)
-        deselect_all_dirs_button.click(fn=deselect_all_dirs, inputs=None, outputs=directory_checkboxes)
+            base_dir_checkbox.change(fn=show_dir_textbox, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[base_dir_textbox, directory_checkboxes])
+            base_dir_textbox.change(fn=update_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[directory_checkboxes])
+            directory_checkboxes.change(fn=update_loras, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=[lora_checkboxes, select_all_lora_button, deselect_all_lora_button])
+            select_all_lora_button.click(fn=select_all_lora, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=lora_checkboxes)
+            deselect_all_lora_button.click(fn=deselect_all_lora, inputs=None, outputs=lora_checkboxes)
+            select_all_dirs_button.click(fn=select_all_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=directory_checkboxes)
+            deselect_all_dirs_button.click(fn=deselect_all_dirs, inputs=None, outputs=directory_checkboxes)
+            checkbox_save_grid.change(fn=toggle_row_number, inputs=checkbox_save_grid, outputs=grid_row_number)
 
-        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid]
+        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, grid_row_number]
 
-    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid):
+    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, row_number):
         p.do_not_save_grid = True  # disable default grid image
 
         job_count = 0
@@ -209,7 +218,7 @@ class Script(scripts.Script):
             infotexts += proc.infotexts
 
         if is_save_grid and len(result_images) > 1:
-            grid_image = images.image_grid(result_images, rows=1)
+            grid_image = images.image_grid(result_images, rows=int(row_number))
             result_images.insert(0, grid_image)
             all_prompts.insert(0, "")
             infotexts.insert(0, "")
