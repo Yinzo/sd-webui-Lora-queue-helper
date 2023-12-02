@@ -2,6 +2,7 @@ import os
 import json
 import copy
 import random
+import math
 
 import gradio as gr
 
@@ -114,7 +115,10 @@ class Script(scripts.Script):
             return gr.CheckboxGroup.update(value=[])
 
         def toggle_row_number(checked):
-            return gr.Number.update(visible=checked)
+            return gr.Number.update(visible=checked), gr.Checkbox.update(visible=checked)
+
+        def toggle_auto_row_number(checked):
+            return gr.Number.update(interactive=not checked)
 
         with gr.Column():
             base_dir_checkbox = gr.Checkbox(label="Use Custom Lora path", value=False,
@@ -142,8 +146,10 @@ class Script(scripts.Script):
                 checkbox_iterate_batch = gr.Checkbox(label="Use same random seed", value=False, elem_id=self.elem_id("checkbox_iterate_batch"))
             
             with gr.Row(equal_height=True):
-                checkbox_save_grid = gr.Checkbox(label="Save grid image", value=True, elem_id=self.elem_id("checkbox_save_grid"))
-                grid_row_number = gr.Number(label="Grid row number", value=1, visible=True, elem_id=self.elem_id("grid_row_number"))
+                with gr.Column():
+                    checkbox_save_grid = gr.Checkbox(label="Save grid image", value=True, elem_id=self.elem_id("checkbox_save_grid"))
+                    checkbox_auto_row_number = gr.Checkbox(label="Auto row number", value=True, elem_id=self.elem_id("checkbox_auto_row_number"))
+                grid_row_number = gr.Number(label="Grid row number", value=1, interactive=False, elem_id=self.elem_id("grid_row_number"))
 
             base_dir_checkbox.change(fn=show_dir_textbox, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[base_dir_textbox, directory_checkboxes])
             base_dir_textbox.change(fn=update_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[directory_checkboxes])
@@ -152,11 +158,12 @@ class Script(scripts.Script):
             deselect_all_lora_button.click(fn=deselect_all_lora, inputs=None, outputs=lora_checkboxes)
             select_all_dirs_button.click(fn=select_all_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=directory_checkboxes)
             deselect_all_dirs_button.click(fn=deselect_all_dirs, inputs=None, outputs=directory_checkboxes)
-            checkbox_save_grid.change(fn=toggle_row_number, inputs=checkbox_save_grid, outputs=grid_row_number)
+            checkbox_save_grid.change(fn=toggle_row_number, inputs=checkbox_save_grid, outputs=[grid_row_number, checkbox_auto_row_number])
+            checkbox_auto_row_number.change(fn=toggle_auto_row_number, inputs=[checkbox_auto_row_number], outputs=grid_row_number)
 
-        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, grid_row_number]
+        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number]
 
-    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, row_number):
+    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number):
         p.do_not_save_grid = True  # disable default grid image
 
         job_count = 0
@@ -219,7 +226,13 @@ class Script(scripts.Script):
             infotexts += proc.infotexts
 
         if is_save_grid and len(result_images) > 1:
-            grid_image = images.image_grid(result_images, rows=int(row_number))
+            if is_auto_row_number:
+                # get a 4:3 rectangular width
+                row_number = round(3.0 * math.sqrt(len(result_images)/12.0))
+            else:
+                row_number = int(row_number)
+
+            grid_image = images.image_grid(result_images, rows=row_number)
             result_images.insert(0, grid_image)
             all_prompts.insert(0, "")
             infotexts.insert(0, "")
