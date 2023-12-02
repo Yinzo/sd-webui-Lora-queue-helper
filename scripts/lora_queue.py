@@ -164,6 +164,9 @@ class Script(scripts.Script):
         return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number]
 
     def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number):
+        if len(selected_loras) == 0:
+            return process_images(p)
+
         p.do_not_save_grid = True  # disable default grid image
 
         job_count = 0
