@@ -89,11 +89,12 @@ class Script(scripts.Script):
 
             return all_loras
 
-        def update_loras(is_use_custom_path, custom_path, directories):
+        def update_loras(current_selected, is_use_custom_path, custom_path, directories):
             base_path = get_base_path(is_use_custom_path, custom_path)
             all_loras = get_lora(base_path, directories)
             visible = len(all_loras) > 0
-            return gr.CheckboxGroup.update(choices=all_loras, value=all_loras, visible=visible), gr.Button.update(
+            new_values = [lora for lora in all_loras if lora in current_selected]
+            return gr.CheckboxGroup.update(choices=all_loras, value=new_values, visible=visible), gr.Button.update(
                 visible=visible), gr.Button.update(visible=visible)
 
         def select_all_dirs(is_use_custom_path, custom_path):
@@ -146,7 +147,7 @@ class Script(scripts.Script):
 
             base_dir_checkbox.change(fn=show_dir_textbox, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[base_dir_textbox, directory_checkboxes])
             base_dir_textbox.change(fn=update_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[directory_checkboxes])
-            directory_checkboxes.change(fn=update_loras, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=[lora_checkboxes, select_all_lora_button, deselect_all_lora_button])
+            directory_checkboxes.change(fn=update_loras, inputs=[lora_checkboxes, base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=[lora_checkboxes, select_all_lora_button, deselect_all_lora_button])
             select_all_lora_button.click(fn=select_all_lora, inputs=[base_dir_checkbox, base_dir_textbox, directory_checkboxes], outputs=lora_checkboxes)
             deselect_all_lora_button.click(fn=deselect_all_lora, inputs=None, outputs=lora_checkboxes)
             select_all_dirs_button.click(fn=select_all_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=directory_checkboxes)
