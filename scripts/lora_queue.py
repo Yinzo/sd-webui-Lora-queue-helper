@@ -21,16 +21,36 @@ def allowed_path(path):
 def get_base_path(is_use_custom_path, custom_path):
     return lora_dir.joinpath(custom_path) if is_use_custom_path else lora_dir
 
-
-def get_directories(base_path):
-    directories = ["/"]
+def is_directory_contain_lora(path):
     try:
-        if allowed_path(base_path):
-            directories.extend([d for d in os.listdir(base_path) if os.path.isdir(os.path.join(base_path, d))])
+        if allowed_path(path):
+            safetensor_files = [f for f in os.listdir(path) if f.endswith('.safetensors')]
+            return len(safetensor_files) > 0
     except FileNotFoundError:
         pass
     except Exception as e:
         print(e)
+
+    return False
+
+def get_directories(base_path, include_root=True):
+    directories = ["/"] if include_root else []
+    try:
+        if allowed_path(base_path):
+            for entry in os.listdir(base_path):
+                full_path = os.path.join(base_path, entry)
+                if os.path.isdir(full_path):
+                    if is_directory_contain_lora(full_path):
+                        directories.append(entry)
+                    
+                    nested_directories = get_directories(full_path, include_root=False)
+                    directories.extend([os.path.join(entry, d) for d in nested_directories])
+
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(e)
+
     return directories
 
 def read_json_file(file_path):
