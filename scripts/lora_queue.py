@@ -5,6 +5,7 @@ import random
 import math
 
 import gradio as gr
+from PIL import Image, ImageDraw, ImageFont
 
 from modules import sd_samplers, errors, scripts, images, sd_models
 from modules.processing import Processed, process_images
@@ -83,10 +84,6 @@ def get_lora_prompt(lora_path, json_path):
     output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
 
     return output
-
-# custom changes by Claude AI
-from PIL import Image, ImageDraw, ImageFont
-import sys
 
 def image_grid_with_text(imgs, texts, rows=None, cols=None, font_path=None, font_size=20, text_color="#FFFFFF", stroke_color="#000000", stroke_width=2, add_text=True):
     if rows is None:
@@ -301,7 +298,7 @@ class Script(scripts.Script):
         result_images = []
         all_prompts = []
         infotexts = []
-        lora_names = []  # Add this line to store LoRA names
+        lora_names = []
 
         for args in jobs:
             state.job = f"{state.job_no + 1} out of {state.job_count}"
@@ -342,9 +339,10 @@ class Script(scripts.Script):
                 add_text=checkbox_add_text
             )
 
+            base_prompt = p.prompt or "Empty"
             result_images.insert(0, grid_image)
-            all_prompts.insert(0, "Grid")
-            infotexts.insert(0, "Grid")
-            lora_names.insert(0, "Grid")
+            all_prompts.insert(0, base_prompt)
+            lora_name_list = '\n'.join(lora_names)
+            infotexts.insert(0, f"Prompt:\n{base_prompt}\n\nLora:\n{lora_name_list}")
 
-        return Processed(p, result_images, p.seed, "", all_prompts=all_prompts, infotexts=infotexts)
+        return Processed(p, result_images, p.seed, infotexts[0], all_prompts=all_prompts, infotexts=infotexts)
