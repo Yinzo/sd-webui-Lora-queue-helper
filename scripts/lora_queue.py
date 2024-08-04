@@ -341,6 +341,8 @@ class Script(scripts.Script):
                 add_text=checkbox_add_text
             )
 
+            images.save_image(grid_image, p.outpath_grids, "Lora Queue Helper", extension=opts.grid_format, prompt=p.prompt, seed=p.seed, grid=True, p=p)
+
             base_prompt = p.prompt or "Empty"
             result_images.insert(0, grid_image)
             all_prompts.insert(0, base_prompt)
