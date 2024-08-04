@@ -200,7 +200,7 @@ class Script(scripts.Script):
             base_dir = base_dir_textbox.value if base_dir_checkbox.value else lora_dir
             all_dirs = get_directories(base_dir)
 
-            directory_checkboxes = gr.CheckboxGroup(label="Select Directory", choices=all_dirs, value=None, elem_id=self.elem_id("directory_checkboxes"))
+            directory_checkboxes = gr.CheckboxGroup(label="Select Directory", choices=all_dirs, value=["/"], elem_id=self.elem_id("directory_checkboxes"))
 
             with gr.Row():
                 select_all_dirs_button = gr.Button("All")
