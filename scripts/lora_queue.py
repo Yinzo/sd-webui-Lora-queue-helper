@@ -15,8 +15,6 @@ from pathlib import Path
 
 lora_dir = Path(cmd_opts.lora_dir).resolve()
 
-def truncate_name(name, max_length=32):
-    return name[:max_length] if len(name) > max_length else name
 
 def allowed_path(path):
     return Path(path).resolve().is_relative_to(lora_dir)
@@ -60,6 +58,15 @@ def read_json_file(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
+
+def get_lora_name(lora_path):
+    if opts.lora_preferred_name == "Filename":
+        lora_name = lora_path.stem
+    else:
+        metadata = sd_models.read_metadata_from_safetensors(lora_path)
+        lora_name = metadata.get('ss_output_name', lora_path.stem)
+    return lora_name
+
 def get_lora_prompt(lora_path, json_path):
     # Open and read the JSON file
     with open(json_path, 'r', encoding='utf-8') as file:
@@ -75,11 +82,7 @@ def get_lora_prompt(lora_path, json_path):
     except:
         preferred_weight = 1
 
-    if opts.lora_preferred_name == "Filename":
-        lora_name = lora_path.stem
-    else:
-        metadata = sd_models.read_metadata_from_safetensors(lora_path)
-        lora_name = metadata.get('ss_output_name', lora_path.stem)
+    lora_name = get_lora_name(lora_path)
 
     # Format the prompt string
     output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
@@ -281,6 +284,7 @@ class Script(scripts.Script):
 
                 args = {}
                 args["prompt"] = additional_prompt +"," + p.prompt
+                args['lora_name'] = get_lora_name(lora_file_path)
 
                 job_count += args.get("n_iter", p.n_iter)
 
@@ -297,6 +301,7 @@ class Script(scripts.Script):
         lora_names = []
 
         for args in jobs:
+            lora_name = args.pop('lora_name')
             state.job = f"{state.job_no + 1} out of {state.job_count}"
 
             copy_p = copy.copy(p)
@@ -306,9 +311,7 @@ class Script(scripts.Script):
             proc = process_images(copy_p)
             result_images += proc.images
             
-            # Extract LoRA name from the prompt and store it
-            lora_name = args["prompt"].split(":")[1].split(">")[0]
-            lora_names.extend([truncate_name(lora_name)] * len(proc.images))
+            lora_names.extend([lora_name] * len(proc.images))
 
             if checkbox_iterate:
                 p.seed = p.seed + (p.batch_size * p.n_iter)
@@ -341,7 +344,7 @@ class Script(scripts.Script):
             base_prompt = p.prompt or "Empty"
             result_images.insert(0, grid_image)
             all_prompts.insert(0, base_prompt)
-            lora_name_list = '\n'.join(lora_names)
+            lora_name_list = '\n'.join(selected_loras)
             infotexts.insert(0, f"Prompt:\n{base_prompt}\n\nLora:\n{lora_name_list}")
 
         return Processed(p, result_images, p.seed, infotexts[0], all_prompts=all_prompts, infotexts=infotexts)
