@@ -5,8 +5,10 @@ import random
 import math
 
 import gradio as gr
+from PIL import Image, ImageDraw, ImageFont
 
 from modules import sd_samplers, errors, scripts, images, sd_models
+from modules.paths_internal import roboto_ttf_file
 from modules.processing import Processed, process_images
 from modules.shared import state, cmd_opts, opts
 from pathlib import Path
@@ -16,7 +18,6 @@ lora_dir = Path(cmd_opts.lora_dir).resolve()
 
 def allowed_path(path):
     return Path(path).resolve().is_relative_to(lora_dir)
-
 
 def get_base_path(is_use_custom_path, custom_path):
     return lora_dir.joinpath(custom_path) if is_use_custom_path else lora_dir
@@ -57,6 +58,15 @@ def read_json_file(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
+
+def get_lora_name(lora_path):
+    if opts.lora_preferred_name == "Filename":
+        lora_name = lora_path.stem
+    else:
+        metadata = sd_models.read_metadata_from_safetensors(lora_path)
+        lora_name = metadata.get('ss_output_name', lora_path.stem)
+    return lora_name
+
 def get_lora_prompt(lora_path, json_path):
     # Open and read the JSON file
     with open(json_path, 'r', encoding='utf-8') as file:
@@ -72,16 +82,58 @@ def get_lora_prompt(lora_path, json_path):
     except:
         preferred_weight = 1
 
-    if opts.lora_preferred_name == "Filename":
-        lora_name = lora_path.stem
-    else:
-        metadata = sd_models.read_metadata_from_safetensors(lora_path)
-        lora_name = metadata.get('ss_output_name', lora_path.stem)
+    lora_name = get_lora_name(lora_path)
 
     # Format the prompt string
     output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
 
     return output
+
+def image_grid_with_text(imgs, texts, rows=None, cols=None, font_path=None, font_size=20, text_color="#FFFFFF", stroke_color="#000000", stroke_width=2, add_text=True):
+    if rows is None:
+        rows = math.sqrt(len(imgs))
+        rows = round(rows)
+
+    if cols is None:
+        cols = math.ceil(len(imgs) / rows)
+
+    w, h = imgs[0].size
+    grid = Image.new('RGB', size=(cols * w, rows * h), color='black')
+
+    for i, img in enumerate(imgs):
+        grid.paste(img, box=(i % cols * w, i // cols * h))
+    
+    if add_text:
+        draw = ImageDraw.Draw(grid)
+        
+        font = None
+        if font_path:
+            if os.path.exists(font_path):
+                try:
+                    font = ImageFont.truetype(font_path, font_size)
+                except IOError as e:
+                    print(f"Error loading font from {font_path}: {e}. Using default font.")
+            else:
+                print(f"Font file not found at {font_path}. Using default font.")
+
+        if font is None:
+            font = ImageFont.truetype(roboto_ttf_file, font_size)
+
+        for i, text in enumerate(texts):
+            x = (i % cols) * w
+            y = (i // cols) * h
+            draw_text_with_stroke(draw, text, (x+5, y+5), font, text_color, stroke_color, stroke_width)
+
+    return grid
+
+def draw_text_with_stroke(draw, text, position, font, text_color, stroke_color, stroke_width):
+    x, y = position
+    # draw stroke
+    for dx, dy in [(j, k) for j in range(-stroke_width, stroke_width + 1) for k in range(-stroke_width, stroke_width + 1)]:
+        draw.text((x + dx, y + dy), text, font=font, fill=stroke_color)
+    # draw text
+    draw.text((x, y), text, font=font, fill=text_color)
+# end
 
 class Script(scripts.Script):
     def title(self):
@@ -165,11 +217,23 @@ class Script(scripts.Script):
                 checkbox_iterate = gr.Checkbox(label="Use consecutive seed", value=False, elem_id=self.elem_id("checkbox_iterate"))
                 checkbox_iterate_batch = gr.Checkbox(label="Use same random seed", value=False, elem_id=self.elem_id("checkbox_iterate_batch"))
             
-            with gr.Row(equal_height=True):
+            with gr.Row():
                 with gr.Column():
                     checkbox_save_grid = gr.Checkbox(label="Save grid image", value=True, elem_id=self.elem_id("checkbox_save_grid"))
                     checkbox_auto_row_number = gr.Checkbox(label="Auto row number", value=True, elem_id=self.elem_id("checkbox_auto_row_number"))
-                grid_row_number = gr.Number(label="Grid row number", value=1, interactive=False, elem_id=self.elem_id("grid_row_number"))
+                    checkbox_add_text = gr.Checkbox(label="Add text to grid", value=True, elem_id=self.elem_id("checkbox_add_text"))
+                
+                with gr.Column():
+                    grid_row_number = gr.Number(label="Grid row number", value=1, interactive=False, elem_id=self.elem_id("grid_row_number"))
+
+            with gr.Row():
+                font_path = gr.Textbox(label="Custom Font Path", placeholder="Relative path to your .ttf file, base on Lora Directory", elem_id=self.elem_id("font_path"))
+                font_size = gr.Number(label="Font Size", value=20, elem_id=self.elem_id("font_size"))
+            
+            with gr.Row():
+                font_color = gr.Textbox(label="Font Color", value="#FFFFFF", elem_id=self.elem_id("font_color"))
+                stroke_color = gr.Textbox(label="Stroke Color", value="#000000", elem_id=self.elem_id("stroke_color"))
+                stroke_width = gr.Number(label="Stroke Width", value=2, elem_id=self.elem_id("stroke_width"))
 
             base_dir_checkbox.change(fn=show_dir_textbox, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[base_dir_textbox, directory_checkboxes])
             base_dir_textbox.change(fn=update_dirs, inputs=[base_dir_checkbox, base_dir_textbox], outputs=[directory_checkboxes])
@@ -181,9 +245,9 @@ class Script(scripts.Script):
             checkbox_save_grid.change(fn=toggle_row_number, inputs=checkbox_save_grid, outputs=[grid_row_number, checkbox_auto_row_number])
             checkbox_auto_row_number.change(fn=toggle_auto_row_number, inputs=[checkbox_auto_row_number], outputs=grid_row_number)
 
-        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number]
+        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text]
 
-    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number):
+    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text):
         if len(selected_loras) == 0:
             return process_images(p)
 
@@ -220,6 +284,7 @@ class Script(scripts.Script):
 
                 args = {}
                 args["prompt"] = additional_prompt +"," + p.prompt
+                args['lora_name'] = get_lora_name(lora_file_path)
 
                 job_count += args.get("n_iter", p.n_iter)
 
@@ -233,7 +298,10 @@ class Script(scripts.Script):
         result_images = []
         all_prompts = []
         infotexts = []
+        lora_names = []
+
         for args in jobs:
+            lora_name = args.pop('lora_name')
             state.job = f"{state.job_no + 1} out of {state.job_count}"
 
             copy_p = copy.copy(p)
@@ -242,6 +310,8 @@ class Script(scripts.Script):
 
             proc = process_images(copy_p)
             result_images += proc.images
+            
+            lora_names.extend([lora_name] * len(proc.images))
 
             if checkbox_iterate:
                 p.seed = p.seed + (p.batch_size * p.n_iter)
@@ -255,9 +325,26 @@ class Script(scripts.Script):
             else:
                 row_number = int(row_number)
 
-            grid_image = images.image_grid(result_images, rows=row_number)
-            result_images.insert(0, grid_image)
-            all_prompts.insert(0, "")
-            infotexts.insert(0, "")
+            if not allowed_path(font_path):
+                font_path = None
 
-        return Processed(p, result_images, p.seed, "", all_prompts=all_prompts, infotexts=infotexts)
+            # Create grid with LoRA names
+            grid_image = image_grid_with_text(
+                result_images, 
+                lora_names, 
+                rows=row_number, 
+                font_path=font_path, 
+                font_size=int(font_size),
+                text_color=font_color,
+                stroke_color=stroke_color,
+                stroke_width=int(stroke_width),
+                add_text=checkbox_add_text
+            )
+
+            base_prompt = p.prompt or "Empty"
+            result_images.insert(0, grid_image)
+            all_prompts.insert(0, base_prompt)
+            lora_name_list = '\n'.join(selected_loras)
+            infotexts.insert(0, f"Prompt:\n{base_prompt}\n\nLora:\n{lora_name_list}")
+
+        return Processed(p, result_images, p.seed, infotexts[0], all_prompts=all_prompts, infotexts=infotexts)
