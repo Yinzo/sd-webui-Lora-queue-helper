@@ -189,6 +189,9 @@ class Script(scripts.Script):
         def toggle_row_number(checked):
             return gr.Number.update(visible=checked), gr.Checkbox.update(visible=checked)
 
+        def select_lora_tags_position(selected):
+            return gr.CheckboxGroup.update(value=selected)
+
         def toggle_auto_row_number(checked):
             return gr.Number.update(interactive=not checked)
 
@@ -208,6 +211,8 @@ class Script(scripts.Script):
             startup_loras = get_lora(base_dir, directory_checkboxes.value)
             
             lora_checkboxes = gr.CheckboxGroup(label="Lora", choices=startup_loras, value=startup_loras, visible=len(startup_loras)>0, elem_id=self.elem_id("lora_checkboxes"))
+
+            lora_tags_position_radio = gr.Radio(label="Lora Tags Position", choices=["Prepend", "Append"], value="Prepend", elem_id=self.elem_id("lora_tag_position_radio"))
 
             with gr.Row():
                 select_all_lora_button = gr.Button("All", visible=len(startup_loras)>0)
@@ -244,10 +249,11 @@ class Script(scripts.Script):
             deselect_all_dirs_button.click(fn=deselect_all_dirs, inputs=None, outputs=directory_checkboxes)
             checkbox_save_grid.change(fn=toggle_row_number, inputs=checkbox_save_grid, outputs=[grid_row_number, checkbox_auto_row_number])
             checkbox_auto_row_number.change(fn=toggle_auto_row_number, inputs=[checkbox_auto_row_number], outputs=grid_row_number)
+            lora_tags_position_radio.change(fn=select_lora_tags_position, inputs=[lora_tags_position_radio], outputs=[])  
 
-        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text]
+        return [base_dir_checkbox, base_dir_textbox, directory_checkboxes, lora_checkboxes, checkbox_iterate, checkbox_iterate_batch, checkbox_save_grid, checkbox_auto_row_number, grid_row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text, lora_tags_position_radio]
 
-    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text):
+    def run(self, p, is_use_custom_path, custom_path, directories, selected_loras, checkbox_iterate, checkbox_iterate_batch, is_save_grid, is_auto_row_number, row_number, font_path, font_size, font_color, stroke_color, stroke_width, checkbox_add_text, lora_tags_position):
         if len(selected_loras) == 0:
             return process_images(p)
 
@@ -283,7 +289,11 @@ class Script(scripts.Script):
                     additional_prompt = f"<lora:{lora_filename}:1>,"
 
                 args = {}
-                args["prompt"] = additional_prompt +"," + p.prompt
+                if lora_tags_position == "Prepend":
+                    args["prompt"] = additional_prompt +"," + p.prompt
+                elif lora_tags_position == "Append":
+                    args["prompt"] = p.prompt + "," + additional_prompt
+                
                 args['lora_name'] = get_lora_name(lora_file_path)
 
                 job_count += args.get("n_iter", p.n_iter)
