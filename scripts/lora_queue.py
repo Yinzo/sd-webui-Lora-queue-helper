@@ -8,6 +8,7 @@ import gradio as gr
 from PIL import Image, ImageDraw, ImageFont
 
 from modules import sd_samplers, errors, scripts, images, sd_models
+from modules.paths_internal import roboto_ttf_file
 from modules.processing import Processed, process_images
 from modules.shared import state, cmd_opts, opts
 from pathlib import Path
@@ -102,23 +103,18 @@ def image_grid_with_text(imgs, texts, rows=None, cols=None, font_path=None, font
     if add_text:
         draw = ImageDraw.Draw(grid)
         
+        font = None
         if font_path:
-            # Check if it's a relative path
-            if not os.path.isabs(font_path):
-                # Convert relative path to absolute path
-                font_path = os.path.abspath(os.path.join(os.path.dirname(__file__), font_path))
-            
             if os.path.exists(font_path):
                 try:
                     font = ImageFont.truetype(font_path, font_size)
-                except IOError:
-                    print(f"Error loading font from {font_path}. Using default font.")
-                    font = ImageFont.load_default()
+                except IOError as e:
+                    print(f"Error loading font from {font_path}: {e}. Using default font.")
             else:
                 print(f"Font file not found at {font_path}. Using default font.")
-                font = ImageFont.load_default()
-        else:
-            font = ImageFont.load_default()
+
+        if font is None:
+            font = ImageFont.truetype(roboto_ttf_file, font_size)
 
         for i, text in enumerate(texts):
             x = (i % cols) * w
@@ -228,7 +224,7 @@ class Script(scripts.Script):
                     grid_row_number = gr.Number(label="Grid row number", value=1, interactive=False, elem_id=self.elem_id("grid_row_number"))
 
             with gr.Row():
-                font_path = gr.Textbox(label="Custom Font Path", value="myfont.ttf", placeholder="myfont.ttf", elem_id=self.elem_id("font_path"))
+                font_path = gr.Textbox(label="Custom Font Path", placeholder="Relative path to your .ttf file, base on Lora Directory", elem_id=self.elem_id("font_path"))
                 font_size = gr.Number(label="Font Size", value=20, elem_id=self.elem_id("font_size"))
             
             with gr.Row():
@@ -325,6 +321,9 @@ class Script(scripts.Script):
                 row_number = round(3.0 * math.sqrt(len(result_images)/12.0))
             else:
                 row_number = int(row_number)
+
+            if not allowed_path(font_path):
+                font_path = None
 
             # Create grid with LoRA names
             grid_image = image_grid_with_text(
