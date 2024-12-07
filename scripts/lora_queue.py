@@ -290,9 +290,9 @@ class Script(scripts.Script):
 
                 args = {}
                 if lora_tags_position == "Prepend":
-                    args["prompt"] = additional_prompt +"," + p.prompt
-                elif lora_tags_position == "Append":
                     args["prompt"] = p.prompt + "," + additional_prompt
+                elif lora_tags_position == "Append":
+                    args["prompt"] = additional_prompt + "," + p.prompt
                 
                 args['lora_name'] = get_lora_name(lora_file_path)
 
