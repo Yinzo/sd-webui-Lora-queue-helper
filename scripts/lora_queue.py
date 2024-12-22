@@ -278,21 +278,21 @@ class Script(scripts.Script):
                 json_file = lora_filename + '.json'
                 json_file_path = directory.joinpath(json_file)
 
-                additional_prompt = None
+                lora_tags = None
                 if os.path.exists(json_file_path):
                     try:
-                        additional_prompt = get_lora_prompt(lora_file_path, json_file_path)
+                        lora_tags = get_lora_prompt(lora_file_path, json_file_path)
                     except Exception as e:
                         print(f"Lora Queue Helper got error when loading lora info, error: {e}")
                 
-                if additional_prompt == None or not isinstance(additional_prompt, str):
-                    additional_prompt = f"<lora:{lora_filename}:1>,"
+                if lora_tags == None or not isinstance(lora_tags, str):
+                    lora_tags = f"<lora:{lora_filename}:1>,"
 
                 args = {}
                 if lora_tags_position == "Prepend":
-                    args["prompt"] = p.prompt + "," + additional_prompt
+                    args["prompt"] = lora_tags + "," + p.prompt
                 elif lora_tags_position == "Append":
-                    args["prompt"] = additional_prompt + "," + p.prompt
+                    args["prompt"] = p.prompt + "," + lora_tags
                 
                 args['lora_name'] = get_lora_name(lora_file_path)
 
