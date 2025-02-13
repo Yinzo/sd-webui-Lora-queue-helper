@@ -74,7 +74,7 @@ def get_lora_prompt(lora_path, json_path):
 
     # Extract the required fields from the JSON data
     preferred_weight = data.get("preferred weight", 1)
-    activation_text = data.get("activation text", "")
+    activation_text = data.get("activation text", "").strip()
 
     try:
         if float(preferred_weight) == 0:
@@ -85,7 +85,10 @@ def get_lora_prompt(lora_path, json_path):
     lora_name = get_lora_name(lora_path)
 
     # Format the prompt string
-    output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text},"
+    if activation_text:
+        output = f"<lora:{lora_name}:{preferred_weight}>, {activation_text}"
+    else:
+        output = f"<lora:{lora_name}:{preferred_weight}>"
 
     return output
 
@@ -286,13 +289,16 @@ class Script(scripts.Script):
                         print(f"Lora Queue Helper got error when loading lora info, error: {e}")
                 
                 if lora_tags == None or not isinstance(lora_tags, str):
-                    lora_tags = f"<lora:{lora_filename}:1>,"
+                    lora_tags = f"<lora:{lora_filename}:1>"
 
                 args = {}
                 if lora_tags_position == "Prepend":
-                    args["prompt"] = lora_tags + "," + p.prompt
+                    args["prompt"] = lora_tags + ", " + p.prompt
                 elif lora_tags_position == "Append":
-                    args["prompt"] = p.prompt + "," + lora_tags
+                    if not p.prompt.endswith(','):
+                        args["prompt"] = p.prompt + ", " + lora_tags
+                    else:
+                        args["prompt"] = p.prompt + " " + lora_tags
                 
                 args['lora_name'] = get_lora_name(lora_file_path)
 
