@@ -64,7 +64,11 @@ def get_lora_name(lora_path):
         lora_name = lora_path.stem
     else:
         metadata = sd_models.read_metadata_from_safetensors(lora_path)
-        lora_name = metadata.get('ss_output_name', lora_path.stem)
+        lora_name = metadata.get('ss_output_name')
+        # Fall back to filename if ss_output_name is missing, empty, or the literal string "None"
+        # (some training tools incorrectly serialize Python's None as the string "None")
+        if not lora_name or lora_name == "None":
+            lora_name = lora_path.stem
     return lora_name
 
 def get_lora_prompt(lora_path, json_path):
